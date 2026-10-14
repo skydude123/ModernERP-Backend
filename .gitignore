@@ -1,0 +1,63 @@
+﻿# ============================================
+# .NET build output
+# ============================================
+bin/
+obj/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+
+# ============================================
+# Visual Studio / user-specific files
+# ============================================
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.csproj.user
+
+# ============================================
+# Telerik runtime/cache
+# ============================================
+TelerikReportingCache/
+
+# ============================================
+# Local backups / archives
+# ============================================
+*.rar
+*.zip
+*.7z
+*.bak
+*.backup
+
+# ============================================
+# Logs / temporary files
+# ============================================
+*.log
+logs/
+temp/
+tmp/
+
+# ============================================
+# OS files
+# ============================================
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Local secrets/config - review before tracking
+# ============================================
+appsettings.json
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+
+# ============================================
+# Sensitive certificates / keys
+# ============================================
+*.pfx
+*.p12
+*.pem
+*.key
