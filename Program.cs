@@ -1,54 +1,55 @@
 using Dapper;
-
 using HRIStwinbeeAPI.ConnectionData;
 using HRIStwinbeeAPI.Parsers;
 using HRIStwinbeeAPI.Repo;
 using HRIStwinbeeAPI.Repo.AssetAcceptance;
 using HRIStwinbeeAPI.Repo.Depreciation;
 using HRIStwinbeeAPI.Repo.FuelAcceptance;
-using HRIStwinbeeAPI.Repo.ServiceAcceptance;
 using HRIStwinbeeAPI.Repo.Interface;
 using HRIStwinbeeAPI.Repo.Interface.AssetAcceptance;
 using HRIStwinbeeAPI.Repo.Interface.Depreciation;
 using HRIStwinbeeAPI.Repo.Interface.FuelAcceptance;
-using HRIStwinbeeAPI.Repo.Interface.ServiceAcceptance;
 using HRIStwinbeeAPI.Repo.Interface.ItemMaster;
 using HRIStwinbeeAPI.Repo.Interface.ItemWarehouse;
-using HRIStwinbeeAPI.Repo.Interface.PO;
-using HRIStwinbeeAPI.Repo.Interface.Receiving;
 using HRIStwinbeeAPI.Repo.Interface.MaterialIssuance;
+using HRIStwinbeeAPI.Repo.Interface.PO;
+using HRIStwinbeeAPI.Repo.Interface.Quotation;
+using HRIStwinbeeAPI.Repo.Interface.Receiving;
+using HRIStwinbeeAPI.Repo.Interface.ServiceAcceptance;
+using HRIStwinbeeAPI.Repo.Interface.StockItemInquiry;
+using HRIStwinbeeAPI.Repo.Interface.StockTransfer;
 using HRIStwinbeeAPI.Repo.Interface.Suppliers;
 using HRIStwinbeeAPI.Repo.ItemMaster;
 using HRIStwinbeeAPI.Repo.ItemWarehouse;
-using HRIStwinbeeAPI.Repo.PO;
-using HRIStwinbeeAPI.Repo.Receiving;
 using HRIStwinbeeAPI.Repo.MaterialIssuance;
-using HRIStwinbeeAPI.Repo.Interface.StockTransfer;
-using HRIStwinbeeAPI.Repo.Interface.StockItemInquiry;
-using HRIStwinbeeAPI.Repo.StockTransfer;
+using HRIStwinbeeAPI.Repo.PO;
+using HRIStwinbeeAPI.Repo.Quotation;
+using HRIStwinbeeAPI.Repo.Receiving;
+//using HRIStwinbeeAPI.Repo.Security;
+using HRIStwinbeeAPI.Repo.ServiceAcceptance;
 using HRIStwinbeeAPI.Repo.StockItemInquiry;
+using HRIStwinbeeAPI.Repo.StockTransfer;
 using HRIStwinbeeAPI.Repo.Suppliers;
-using HRIStwinbeeAPI.Services.Suppliers;
+using HRIStwinbeeAPI.Repositories.Security;
 using HRIStwinbeeAPI.Services.Depreciation;
 using HRIStwinbeeAPI.Services.PO;
 using HRIStwinbeeAPI.Services.StockItemInquiry;
-
+using HRIStwinbeeAPI.Services.Suppliers;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
 using System.Data;
 using System.IO.Compression;
 using System.Net;
 using System.Security.Claims;
-
 using Telerik.Reporting.Cache.File;
 using Telerik.Reporting.Services;
 using Telerik.Reporting.Services.Engine;
-
 using twbERRANDSapi.AUTH;
+using HRIStwinbeeAPI.Services.Quotation;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -182,31 +183,136 @@ builder.Services.AddSwaggerGen(options =>
     // the controller instead of hiding them from Swagger.
 });
 
+//builder.Services
+//    .AddAuthentication(
+//        CookieAuthenticationDefaults.AuthenticationScheme)
+//    .AddCookie(options =>
+//    {
+//        options.Cookie.Name = "TwinBee.ModernErp.Auth";
+//        options.Cookie.HttpOnly = true;
+//        options.Cookie.IsEssential = true;
+//        options.Cookie.SameSite = SameSiteMode.Lax;
+//        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+//        options.ExpireTimeSpan = TimeSpan.FromHours(10);
+//        //options.ExpireTimeSpan = TimeSpan.FromDays(7);
+//        options.SlidingExpiration = true;
+
+//        options.Events.OnRedirectToLogin = context =>
+//        {
+//            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+//            return Task.CompletedTask;
+//        };
+
+//        options.Events.OnRedirectToAccessDenied = context =>
+//        {
+//            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+//            return Task.CompletedTask;
+//        };
+//    });
+
+
+// ============================================================
+// AUTHENTICATION
+// Existing ModernERPINV + TPAQUOTATION
+// ============================================================
+
 builder.Services
     .AddAuthentication(
-        CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+        CookieAuthenticationDefaults.AuthenticationScheme
+    )
+
+// ========================================================
+// EXISTING MODERNERPINV
+// SESSION EXPIRATION: 15 HOURS (FIXED)
+// ========================================================
+
+.AddCookie(
+    CookieAuthenticationDefaults.AuthenticationScheme,
+    options =>
     {
-        options.Cookie.Name = "TwinBee.ModernErp.Auth";
+        options.Cookie.Name =
+            "TwinBee.ModernErp.Auth";
+
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
-        options.SlidingExpiration = true;
 
-        options.Events.OnRedirectToLogin = context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            return Task.CompletedTask;
-        };
+        options.Cookie.SameSite =
+            SameSiteMode.Lax;
 
-        options.Events.OnRedirectToAccessDenied = context =>
+        options.Cookie.SecurePolicy =
+            CookieSecurePolicy.SameAsRequest;
+
+        // Fixed 15-hour authentication ticket
+        options.ExpireTimeSpan =
+            TimeSpan.FromHours(15);
+
+        // Do not extend the expiration when user is active
+        options.SlidingExpiration = false;
+
+        options.Events.OnRedirectToLogin =
+            context =>
+            {
+                context.Response.StatusCode =
+                    StatusCodes.Status401Unauthorized;
+
+                return Task.CompletedTask;
+            };
+
+        options.Events.OnRedirectToAccessDenied =
+            context =>
+            {
+                context.Response.StatusCode =
+                    StatusCodes.Status403Forbidden;
+
+                return Task.CompletedTask;
+            };
+    }
+)
+
+    // ========================================================
+    // TPAQUOTATION
+    // ========================================================
+    .AddCookie(
+        "QuotationCookie",
+        options =>
         {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            return Task.CompletedTask;
-        };
-    });
+            options.Cookie.Name =
+                "TwinBee.Quotation.Auth";
+
+            options.Cookie.HttpOnly = true;
+            options.Cookie.IsEssential = true;
+
+            options.Cookie.SameSite =
+                SameSiteMode.Lax;
+
+            options.Cookie.SecurePolicy =
+                CookieSecurePolicy.SameAsRequest;
+
+            options.ExpireTimeSpan =
+                TimeSpan.FromHours(10);
+
+            options.SlidingExpiration = true;
+
+            options.Events.OnRedirectToLogin =
+                context =>
+                {
+                    context.Response.StatusCode =
+                        StatusCodes.Status401Unauthorized;
+
+                    return Task.CompletedTask;
+                };
+
+            options.Events.OnRedirectToAccessDenied =
+                context =>
+                {
+                    context.Response.StatusCode =
+                        StatusCodes.Status403Forbidden;
+
+                    return Task.CompletedTask;
+                };
+        }
+    );
+
 
 builder.Services.AddAuthorization(options =>
 {
@@ -286,6 +392,40 @@ builder.Services.AddScoped<
 
 
 // ============================================================
+// TPAQUOTATION REPOSITORIES
+// DATABASE: TWINBEE
+// ============================================================
+
+builder.Services.AddScoped<
+    IQuotationAuthRepository,
+    QuotationAuthRepository
+>();
+
+builder.Services.AddScoped<
+    QuotationSecurityUserRepository
+>();
+
+
+
+// ============================================================
+// TPAQUOTATION - QUOTATION READ MODULE
+// DATABASE: TWINBEE
+// ============================================================
+
+builder.Services.AddScoped<
+    IQuotationRepository,
+    QuotationRepository
+>();
+
+builder.Services.AddScoped<
+    IQuotationService,
+    QuotationService
+>();
+
+
+
+
+// ============================================================
 // BIOMETRIX REPOSITORIES
 // ============================================================
 
@@ -360,6 +500,7 @@ builder.Services.AddScoped<IMaterialIssuanceRepository, MaterialIssuanceReposito
 builder.Services.AddScoped<IStockTransferRepository, StockTransferRepository>();
 builder.Services.AddScoped<IStockItemInquiryRepository, StockItemInquiryRepository>();
 builder.Services.AddScoped<IStockItemInquiryService, StockItemInquiryService>();
+builder.Services.AddScoped<SecurityUserRepository>();
 
 
 // ============================================================
@@ -859,24 +1000,57 @@ app.UseResponseCompression();
 // SWAGGER
 // ============================================================
 
+//app.UseSwagger();
+
+//app.UseSwaggerUI(options =>
+//{
+//    // Relative URL works locally and when deployed under
+//    // an IIS application or virtual directory.
+//    options.SwaggerEndpoint(
+//        "./v1/swagger.json",
+//        "TPA Inventory API v1"
+//    );
+
+//    options.RoutePrefix = "swagger";
+
+//    options.DocumentTitle =
+//        "TPA Inventory API";
+
+//    options.DisplayRequestDuration();
+//});
+
+
+
+
+/* ============================================================
+   SWAGGER CONFIGURATION
+   LOCAL DEVELOPMENT: IIS EXPRESS
+   ============================================================ */
+
 app.UseSwagger();
 
 app.UseSwaggerUI(options =>
 {
-    // Relative URL works locally and when deployed under
-    // an IIS application or virtual directory.
+    // Direct path to the Swagger JSON document
     options.SwaggerEndpoint(
-        "./v1/swagger.json",
+        "/swagger/v1/swagger.json",
         "TPA Inventory API v1"
     );
 
     options.RoutePrefix = "swagger";
 
-    options.DocumentTitle =
-        "TPA Inventory API";
+    options.DocumentTitle = "TPA Inventory API";
 
     options.DisplayRequestDuration();
+
+    // Disable syntax highlighting for large responses
+    options.ConfigObject.AdditionalItems[
+        "syntaxHighlight"
+    ] = false;
 });
+
+
+
 
 
 // ============================================================

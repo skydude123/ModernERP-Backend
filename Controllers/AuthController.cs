@@ -96,15 +96,33 @@ namespace twbERRANDSapi.Controllers
                     claims,
                     CookieAuthenticationDefaults.AuthenticationScheme));
 
+            //await HttpContext.SignInAsync(
+            //    CookieAuthenticationDefaults.AuthenticationScheme,
+            //    principal,
+            //    new AuthenticationProperties
+            //    {
+            //        AllowRefresh = true,
+            //        ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7),
+            //        IsPersistent = true
+            //    });
+
+            //return Ok(result);
+
             await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                principal,
-                new AuthenticationProperties
-                {
-                    AllowRefresh = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7),
-                    IsPersistent = true
-                });
+    CookieAuthenticationDefaults.AuthenticationScheme,
+    principal,
+    new AuthenticationProperties
+    {
+        // Disable automatic session renewal
+        AllowRefresh = false,
+
+        // Session expires 15 hours after login
+        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(15),
+
+        // Keep authentication cookie across browser restarts
+        IsPersistent = true
+    }
+);
 
             return Ok(result);
         }

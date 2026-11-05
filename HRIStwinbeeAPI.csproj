@@ -9,6 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Reports\QUOTATION.trdp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Reports\QUOTATION.trdp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.72" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
@@ -26,8 +36,8 @@
 
   <ItemGroup>
     <Folder Include="Model\" />
-    <Folder Include="Reports\" />
     <Folder Include="App_Data\ReportCache\" />
+    <Folder Include="Repo\Interface\Security\" />
   </ItemGroup>
 
 </Project>
